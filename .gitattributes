@@ -1,0 +1,4 @@
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.nupkg filter=lfs diff=lfs merge=lfs -text
+*.asar filter=lfs diff=lfs merge=lfs -text
+odin-recipes/JavaScript/clipboard-desktop/dist/linux-unpacked/clipboard-tool filter=lfs diff=lfs merge=lfs -text
