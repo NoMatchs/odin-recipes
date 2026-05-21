@@ -172,62 +172,116 @@
 # else:
 #     print('Nope. Thne number was ' + str(secret_number))\\
 
-import random, sys
+# import random, sys
 
-print('Rock,PAPER,SCISSORS')
+# print('Rock,PAPER,SCISSORS')
 
-wins = 0
-losses = 0
-ties = 0
+# wins = 0
+# losses = 0
+# ties = 0
 
-while True:
-    print('%s Wins, %s Losses, %s Ties' % (wins,losses,ties))
-    while True:
-        print("Rnter your move: (r)ock (p)aper (s)scissors or (q)uit")
-        player_move = input('>')
-        if player_move == 'q':
-            sys.exit()
-        if player_move =='r' or player_move == 'p' or player_move == 's':
-            break
-        print("Type one of r,p,s,or .")
-    if player_move == 'r':
-        print("ROCK versus...")
-    elif player_move == 'p':
-        print("PAPER versus...")
-    elif player_move == "s":
-        print("SCCISSORS versus...")
+# while True:
+#     print('%s Wins, %s Losses, %s Ties' % (wins,losses,ties))
+#     while True:
+#         print("Rnter your move: (r)ock (p)aper (s)scissors or (q)uit")
+#         player_move = input('>')
+#         if player_move == 'q':
+#             sys.exit()
+#         if player_move =='r' or player_move == 'p' or player_move == 's':
+#             break
+#         print("Type one of r,p,s,or .")
+#     if player_move == 'r':
+#         print("ROCK versus...")
+#     elif player_move == 'p':
+#         print("PAPER versus...")
+#     elif player_move == "s":
+#         print("SCCISSORS versus...")
 
-    move_number = random.randint(1,3)
-    if move_number == 1:
-        computer_move = 'r'
-        print("ROCK")
-    elif move_number == 2:
-        computer_move = 'p'
-        print("PAPER")
-    elif move_number == 3:
-        computer_move = 's'
-        print("SCISSORS")
+#     move_number = random.randint(1,3)
+#     if move_number == 1:
+#         computer_move = 'r'
+#         print("ROCK")
+#     elif move_number == 2:
+#         computer_move = 'p'
+#         print("PAPER")
+#     elif move_number == 3:
+#         computer_move = 's'
+#         print("SCISSORS")
 
-    if player_move == computer_move:
-        print('it is a tie!')
-        ties += 1
-    elif player_move == 'r' and computer_move == 's':
-        print("You win!")
-        wins += 1
-    elif player_move == 'r' and computer_move == 'p':
-        print('You lose!')
-        losses += 1
-    elif player_move == 's' and computer_move == 'p':
-        print("You win!")
-        wins += 1
-    elif player_move == 's' and computer_move == 'r':
-        print('You lose!')
-        losses += 1
-    elif player_move == 'p' and computer_move == 'r':
-        print("You win!")
-        wins += 1
-    elif player_move == 'p' and computer_move == 's':
-        print('You lose!')
-        losses += 1
+#     if player_move == computer_move:
+#         print('it is a tie!')
+#         ties += 1
+#     elif player_move == 'r' and computer_move == 's':
+#         print("You win!")
+#         wins += 1
+#     elif player_move == 'r' and computer_move == 'p':
+#         print('You lose!')
+#         losses += 1
+#     elif player_move == 's' and computer_move == 'p':
+#         print("You win!")
+#         wins += 1
+#     elif player_move == 's' and computer_move == 'r':
+#         print('You lose!')
+#         losses += 1
+#     elif player_move == 'p' and computer_move == 'r':
+#         print("You win!")
+#         wins += 1
+#     elif player_move == 'p' and computer_move == 's':
+#         print('You lose!')
+#         losses += 1
 
-    print('Tie:' + str(ties) + ' Win:' + str(wins) + ' Lose:' + str(losses))
+#     print('Tie:' + str(ties) + ' Win:' + str(wins) + ' Lose:' + str(losses))
+
+
+# def hello():
+#     print('Hello!')
+#     print('Howdy!')
+#     print('Greating!')
+
+# def say_hello_to(name):
+#     print(f'Hello, {name}')
+
+# say_hello_to('Alice')
+
+# import random
+
+# def get_answer(answer_number):
+#     if answer_number == 1:
+#         return 'It is certain'
+#     elif answer_number == 2:
+#         return 'It is decidedly so'
+#     else:
+#         return "Error"
+
+# r = random.randint(1,2)
+# fortune = get_answer(r)
+
+# print(fortune)
+
+# print('hello' is None)
+
+# spam = print()
+
+# print(spam is None)
+
+# def spam():
+#     eggs = 'spam local'
+#     print(eggs)
+
+# def bacon():
+#     eggs = 'becon local'
+#     print(eggs)
+
+# spam()
+# bacon()
+# print(eggs)
+
+def spam(divide_by):
+    try:
+        return 42 / divide_by
+    except ZeroDivisionError:
+        print("Invalid!")
+        return None
+
+print(spam(2))
+print(spam(0))
