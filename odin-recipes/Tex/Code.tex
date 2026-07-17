@@ -1,0 +1,156 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+
+\begin{document}
+
+\title{初等积分公式大全}
+\author{}
+\date{}
+\maketitle
+
+\section*{基本积分公式}
+
+\begin{enumerate}
+    \item 幂函数积分
+    \[
+    \int x^n \, dx = \frac{x^{n+1}}{n+1} + C \qquad (n \neq -1)
+    \]
+    
+    \item 倒数积分
+    \[
+    \int \frac{1}{x} \, dx = \ln |x| + C
+    \]
+    
+    \item 指数函数积分
+    \[
+    \int e^x \, dx = e^x + C
+    \]
+    \[
+    \int a^x \, dx = \frac{a^x}{\ln a} + C \qquad (a > 0, a \neq 1)
+    \]
+    
+    \item 对数函数积分
+    \[
+    \int \ln x \, dx = x \ln x - x + C
+    \]
+    
+    \item 正弦函数积分
+    \[
+    \int \sin x \, dx = -\cos x + C
+    \]
+    
+    \item 余弦函数积分
+    \[
+    \int \cos x \, dx = \sin x + C
+    \]
+    
+    \item 正切函数积分
+    \[
+    \int \tan x \, dx = -\ln |\cos x| + C = \ln |\sec x| + C
+    \]
+    
+    \item 余切函数积分
+    \[
+    \int \cot x \, dx = \ln |\sin x| + C
+    \]
+    
+    \item 正割函数积分
+    \[
+    \int \sec x \, dx = \ln |\sec x + \tan x| + C
+    \]
+    
+    \item 余割函数积分
+    \[
+    \int \csc x \, dx = \ln |\csc x - \cot x| + C
+    \]
+    
+    \item 反正弦函数积分
+    \[
+    \int \frac{1}{\sqrt{1-x^2}} \, dx = \arcsin x + C = -\arccos x + C
+    \]
+    
+    \item 反正切函数积分
+    \[
+    \int \frac{1}{1+x^2} \, dx = \arctan x + C
+    \]
+\end{enumerate}
+
+\section*{常用扩展公式}
+
+\begin{enumerate}
+    \item 线性函数的积分
+    \[
+    \int (ax+b)^n \, dx = \frac{(ax+b)^{n+1}}{a(n+1)} + C \qquad (n \neq -1)
+    \]
+    
+    \item 分式线性函数的积分
+    \[
+    \int \frac{1}{ax+b} \, dx = \frac{1}{a} \ln |ax+b| + C
+    \]
+    
+    \item 平方和倒数积分
+    \[
+    \int \frac{1}{x^2 + a^2} \, dx = \frac{1}{a} \arctan \frac{x}{a} + C
+    \]
+    
+    \item 平方差倒数积分
+    \[
+    \int \frac{1}{x^2 - a^2} \, dx = \frac{1}{2a} \ln \left| \frac{x-a}{x+a} \right| + C
+    \]
+    
+    \item 根号下的积分（反正弦型）
+    \[
+    \int \frac{1}{\sqrt{a^2 - x^2}} \, dx = \arcsin \frac{x}{a} + C \qquad (a > 0)
+    \]
+    
+    \item 根号下的积分（反双曲正弦型）
+    \[
+    \int \frac{1}{\sqrt{x^2 + a^2}} \, dx = \ln \left| x + \sqrt{x^2 + a^2} \right| + C
+    \]
+    
+    \item 根号下的积分（反双曲余弦型）
+    \[
+    \int \frac{1}{\sqrt{x^2 - a^2}} \, dx = \ln \left| x + \sqrt{x^2 - a^2} \right| + C \qquad (x > a)
+    \]
+    
+    \item 三角函数的平方积分
+    \[
+    \int \sin^2 x \, dx = \frac{x}{2} - \frac{\sin 2x}{4} + C
+    \]
+    \[
+    \int \cos^2 x \, dx = \frac{x}{2} + \frac{\sin 2x}{4} + C
+    \]
+    
+    \item 乘积化差积分
+    \[
+    \int \sin x \cos x \, dx = \frac{1}{2} \sin^2 x + C
+    \]
+\end{enumerate}
+
+\section*{分部积分公式}
+
+\[
+\int u \, dv = uv - \int v \, du
+\]
+
+常用分部积分类型：
+
+\begin{enumerate}
+    \item 多项式 × 指数函数
+    \[
+    \int x e^x \, dx = (x-1)e^x + C
+    \]
+    \[
+    \int x^2 e^x \, dx = (x^2 - 2x + 2)e^x + C
+    \]
+    
+    \item 多项式 × 三角函数
+    \[
+    \int x \sin x \, dx = -x \cos x + \sin x + C
+    \]
+    \[
+    \int x \cos x \, dx = x \sin x + \cos x + C
+    \]
+\end{enumerate}
+
+\end{document}
