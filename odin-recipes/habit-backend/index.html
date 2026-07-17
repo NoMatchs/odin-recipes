@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>我的打卡</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .app {
+            max-width: 420px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 24px 20px 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            margin: 20px auto;
+        }
+
+        /* 登录/注册 */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .auth-form h2 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .auth-form input {
+            padding: 14px 16px;
+            border: 2px solid #e8ecf1;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .auth-form input:focus {
+            border-color: #6c5ce7;
+        }
+        .auth-form .btn {
+            padding: 14px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .auth-form .btn:active {
+            background: #5a4bd1;
+        }
+        .auth-form .switch {
+            text-align: center;
+            color: #6c5ce7;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+
+        /* 主界面 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: #1a1a2e;
+        }
+        .header .logout {
+            color: #e74c6f;
+            font-size: 14px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 6px 12px;
+        }
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stats .stat-item {
+            flex: 1;
+            background: #f8f9fc;
+            border-radius: 14px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+        .stats .stat-item .num {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .stats .stat-item .label {
+            font-size: 12px;
+            color: #8e94a2;
+            margin-top: 4px;
+        }
+
+        /* 日历网格 */
+        .calendar {
+            margin: 16px 0 20px;
+        }
+        .calendar .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 12px;
+            color: #8e94a2;
+            margin-bottom: 6px;
+        }
+        .calendar .grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar .day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #f0f2f5;
+            color: #8e94a2;
+            transition: transform 0.1s;
+        }
+        .calendar .day.has-checkin {
+            background: #6c5ce7;
+            color: white;
+        }
+        .calendar .day.today {
+            border: 2px solid #6c5ce7;
+            background: white;
+            color: #1a1a2e;
+            font-weight: 700;
+        }
+        .calendar .day.today.has-checkin {
+            background: #6c5ce7;
+            color: white;
+            border-color: #6c5ce7;
+        }
+        .calendar .day.empty {
+            background: transparent;
+        }
+
+        /* 打卡区 */
+        .checkin-area {
+            background: #f8f9fc;
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        .checkin-area .habit-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .checkin-area .habit-btn {
+            padding: 8px 18px;
+            border: 2px solid #e8ecf1;
+            border-radius: 20px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checkin-area .habit-btn.active {
+            border-color: #6c5ce7;
+            background: #6c5ce7;
+            color: white;
+        }
+        .checkin-area .score-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        .checkin-area .score-row label {
+            font-size: 14px;
+            color: #4a4a5a;
+            font-weight: 500;
+        }
+        .checkin-area .score-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #e8ecf1;
+            background: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checkin-area .score-btn.active {
+            border-color: #6c5ce7;
+            background: #6c5ce7;
+            color: white;
+        }
+        .checkin-area input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e8ecf1;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .checkin-area input[type="text"]:focus {
+            border-color: #6c5ce7;
+        }
+        .checkin-area .checkin-btn {
+            width: 100%;
+            padding: 14px;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkin-area .checkin-btn:disabled {
+            background: #b0b8c8;
+            cursor: not-allowed;
+        }
+        .checkin-area .checkin-btn:active {
+            background: #5a4bd1;
+        }
+
+        .toast {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-muted {
+            color: #8e94a2;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <div class="app" id="app">
+        <!-- ========== 登录/注册 ========== -->
+        <div id="authPage">
+            <div class="auth-form">
+                <h2>📊 习惯打卡</h2>
+                <input id="authUsername" placeholder="用户名" />
+                <input id="authPassword" type="password" placeholder="密码" />
+                <button class="btn" id="authBtn">注册 / 登录</button>
+                <div class="switch" id="switchMode">已有账号？去登录</div>
+                <div class="text-center text-muted mt-8" style="font-size:12px;">所有数据存在你的本地</div>
+            </div>
+        </div>
+
+        <!-- ========== 主界面 ========== -->
+        <div id="mainPage" class="hidden">
+            <div class="header">
+                <h1>📊 我的打卡</h1>
+                <button class="logout" id="logoutBtn">退出</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item"><div class="num" id="streakNum">0</div><div class="label">🔥 连续</div></div>
+                <div class="stat-item"><div class="num" id="totalNum">0</div><div class="label">📌 总打卡</div></div>
+                <div class="stat-item"><div class="num" id="monthNum">0</div><div class="label">📅 本月</div></div>
+            </div>
+
+            <div class="calendar">
+                <div class="weekdays">
+                    <span>日</span><span>一</span><span>二</span><span>三</span>
+                    <span>四</span><span>五</span><span>六</span>
+                </div>
+                <div class="grid" id="calendarGrid"></div>
+            </div>
+
+            <div class="checkin-area">
+                <div class="habit-options">
+                    <button class="habit-btn active" data-habit="mood">😊 心情</button>
+                    <button class="habit-btn" data-habit="exercise">🏃 运动</button>
+                    <button class="habit-btn" data-habit="read">📚 读书</button>
+                    <button class="habit-btn" data-habit="meditate">🧘 冥想</button>
+                </div>
+                <div class="score-row">
+                    <label>心情分：</label>
+                    <button class="score-btn" data-score="1">1</button>
+                    <button class="score-btn" data-score="2">2</button>
+                    <button class="score-btn active" data-score="3">3</button>
+                    <button class="score-btn" data-score="4">4</button>
+                    <button class="score-btn" data-score="5">5</button>
+                </div>
+                <input id="noteInput" placeholder="写个备注（可选）" maxlength="30" />
+                <button class="checkin-btn" id="checkinBtn">✅ 打卡</button>
+                <div id="todayStatus" class="text-center text-muted mt-8" style="font-size:13px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        //  工具 & 全局状态
+        // ============================================
+        const API_BASE = 'https://nacho-pointless-perennial.ngrok-free.dev/api';
+        let token = localStorage.getItem('habit_token') || '';
+        let userId = localStorage.getItem('habit_userId') || '';
+        let currentUsername = localStorage.getItem('habit_username') || '';
+
+        let selectedHabit = 'mood';
+        let selectedScore = 3;
+        let isLoginMode = true;
+
+        const $ = id => document.getElementById(id);
+        const toast = (msg) => {
+            const el = $('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => el.classList.remove('show'), 2200);
+        };
+
+        // ============================================
+        //  API 请求封装
+        // ============================================
+        async function api(method, path, data = null) {
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (data) opts.body = JSON.stringify(data);
+            if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(`${API_BASE}${path}`, opts);
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.msg || json.error || '请求失败');
+            return json;
+        }
+
+        // ============================================
+        //  登录 / 注册
+        // ============================================
+        $('switchMode').addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            $('switchMode').textContent = isLoginMode ? '还没有账号？去注册' : '已有账号？去登录';
+            $('authBtn').textContent = isLoginMode ? '登录' : '注册';
+        });
+
+        $('authBtn').addEventListener('click', async () => {
+            const username = $('authUsername').value.trim();
+            const password = $('authPassword').value.trim();
+            if (!username || !password) return toast('请输入用户名和密码');
+
+            try {
+                const path = isLoginMode ? '/login' : '/register';
+                const res = await api('POST', path, { username, password });
+
+                if (isLoginMode) {
+                    token = res.token;
+                    userId = res.userId;
+                    localStorage.setItem('habit_token', token);
+                    localStorage.setItem('habit_userId', userId);
+                    localStorage.setItem('habit_username', username);
+                    currentUsername = username;
+                    toast('登录成功 🎉');
+                    showMain();
+                } else {
+                    toast('注册成功，请登录 🎉');
+                    isLoginMode = true;
+                    $('switchMode').textContent = '还没有账号？去注册';
+                    $('authBtn').textContent = '登录';
+                }
+            } catch (e) {
+                toast('❌ ' + e.message);
+            }
+        });
+
+        // 回车触发登录/注册
+        $('authPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('authBtn').click(); });
+
+        // ============================================
+        //  退出
+        // ============================================
+        $('logoutBtn').addEventListener('click', () => {
+            token = '';
+            userId = '';
+            localStorage.removeItem('habit_token');
+            localStorage.removeItem('habit_userId');
+            localStorage.removeItem('habit_username');
+            showAuth();
+            toast('已退出');
+        });
+
+        // ============================================
+        //  切换页面
+        // ============================================
+        function showAuth() {
+            $('authPage').classList.remove('hidden');
+            $('mainPage').classList.add('hidden');
+        }
+
+        function showMain() {
+            $('authPage').classList.add('hidden');
+            $('mainPage').classList.remove('hidden');
+            loadStats();
+        }
+
+        // ============================================
+        //  习惯选择
+        // ============================================
+        document.querySelectorAll('.habit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.habit-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedHabit = btn.dataset.habit;
+                // 切换习惯时重新检查今天是否已打卡
+                checkTodayStatus();
+            });
+        });
+
+        // ============================================
+        //  分数选择
+        // ============================================
+        document.querySelectorAll('.score-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedScore = parseInt(btn.dataset.score);
+            });
+        });
+
+        // ============================================
+        //  检查今天是否已打卡
+        // ============================================
+        async function checkTodayStatus() {
+            try {
+                const res = await api('GET', `/stats?habitType=${selectedHabit}`);
+                const today = new Date().toISOString().split('T')[0];
+                const hasToday = res.stats && res.stats[today];
+                const statusEl = $('todayStatus');
+                if (hasToday) {
+                    statusEl.textContent = '✅ 今天已打卡，明天再来吧！';
+                    $('checkinBtn').disabled = true;
+                } else {
+                    statusEl.textContent = '📝 今天还没打卡，记录一下吧！';
+                    $('checkinBtn').disabled = false;
+                }
+            } catch (e) {
+                // 忽略
+            }
+        }
+
+        // ============================================
+        //  打卡
+        // ============================================
+        $('checkinBtn').addEventListener('click', async () => {
+            const note = $('noteInput').value.trim();
+            try {
+                const res = await api('POST', '/checkin', {
+                    habitType: selectedHabit,
+                    score: selectedScore,
+                    note: note
+                });
+                toast('🎉 打卡成功！');
+                $('noteInput').value = '';
+                loadStats();
+                checkTodayStatus();
+            } catch (e) {
+                toast('❌ ' + e.message);
+            }
+        });
+
+        // ============================================
+        //  加载统计数据 & 渲染日历
+        // ============================================
+        async function loadStats() {
+            try {
+                const res = await api('GET', `/stats?habitType=${selectedHabit}`);
+                const stats = res.stats || {};
+                const today = new Date().toISOString().split('T')[0];
+
+                // 更新统计数字
+                $('streakNum').textContent = res.streak || 0;
+                $('totalNum').textContent = res.totalDays || 0;
+
+                // 本月打卡数（当月 1 号到当天）
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                let monthCount = 0;
+                Object.keys(stats).forEach(d => {
+                    if (d >= firstDay && d <= today) monthCount += stats[d].count || 0;
+                });
+                $('monthNum').textContent = monthCount;
+
+                // 渲染日历
+                renderCalendar(stats);
+
+                // 检查今日状态
+                checkTodayStatus();
+
+            } catch (e) {
+                toast('加载数据失败：' + e.message);
+            }
+        }
+
+        // ============================================
+        //  渲染日历
+        // ============================================
+        function renderCalendar(stats) {
+            const grid = $('calendarGrid');
+            grid.innerHTML = '';
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const todayStr = now.toISOString().split('T')[0];
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // 填充空白
+            for (let i = 0; i < firstDay; i++) {
+                const div = document.createElement('div');
+                div.className = 'day empty';
+                grid.appendChild(div);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const div = document.createElement('div');
+                div.className = 'day';
+                div.textContent = d;
+
+                if (dateStr === todayStr) {
+                    div.classList.add('today');
+                }
+                if (stats[dateStr] && stats[dateStr].count > 0) {
+                    div.classList.add('has-checkin');
+                }
+
+                grid.appendChild(div);
+            }
+        }
+
+        // ============================================
+        //  切换习惯时刷新数据
+        // ============================================
+        document.querySelectorAll('.habit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 已经在上面的监听里处理了，但这里要再触发加载
+                setTimeout(loadStats, 50);
+            });
+        });
+
+        // ============================================
+        //  初始化
+        // ============================================
+        if (token && userId) {
+            showMain();
+        } else {
+            showAuth();
+        }
+
+        // 如果已经登录，定期刷新（每30秒）
+        if (token) {
+            setInterval(loadStats, 30000);
+        }
+
+        console.log('📊 打卡系统已启动！');
+        console.log(`🔑 Token: ${token ? '已设置 ✅' : '未设置 ❌'}`);
+        console.log(`👤 用户: ${currentUsername || '未登录'}`);
+    </script>
+</body>
+</html>

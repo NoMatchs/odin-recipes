@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>剪贴板工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .history-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .history-item:hover {
+            background: #e9ecef;
+        }
+        .history-item .time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        #historyList {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+            padding: 20px;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            display: none;
+            animation: slideIn 0.5s;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 剪贴板工具</h1>
+            <p style="opacity: 0.9;">实时监控剪贴板，保存历史记录</p>
+        </div>
+        <div class="content">
+            <!-- 写入区域 -->
+            <div class="section">
+                <h3>✏️ 写入剪贴板</h3>
+                <textarea id="inputText" rows="2" placeholder="输入要复制的内容..."></textarea>
+                <button onclick="writeToClipboard()">📋 复制</button>
+            </div>
+            
+            <!-- 读取区域 -->
+            <div class="section">
+                <h3>📖 读取剪贴板</h3>
+                <textarea id="outputText" rows="2" readonly placeholder="点击读取..."></textarea>
+                <button onclick="readFromClipboard()">🔄 读取</button>
+            </div>
+            
+            <!-- 历史记录 -->
+            <div class="section">
+                <h3>📚 历史记录 <span class="badge" id="countBadge">0</span></h3>
+                <div id="historyList">
+                    <div class="empty-state">暂无历史记录</div>
+                </div>
+                <button class="danger" onclick="clearHistory()">🗑️ 清空所有历史</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知 -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // 引入 Electron 功能
+        const { clipboard, ipcRenderer } = require('electron');
+        
+        // ========== 基本功能 ==========
+        function writeToClipboard() {
+            const text = document.getElementById('inputText').value;
+            if (text) {
+                clipboard.writeText(text);
+                showNotification('✅ 已写入剪贴板');
+                // 清空输入框
+                document.getElementById('inputText').value = '';
+                // 刷新显示
+                readFromClipboard();
+            } else {
+                alert('请输入内容');
+            }
+        }
+        
+        function readFromClipboard() {
+            const text = clipboard.readText();
+            document.getElementById('outputText').value = text;
+            return text;
+        }
+        
+        function clearHistory() {
+            if (confirm('确定要清空所有历史记录吗？')) {
+                ipcRenderer.send('clear-history');
+                document.getElementById('historyList').innerHTML = '<div class="empty-state">暂无历史记录</div>';
+                document.getElementById('countBadge').textContent = '0';
+                showNotification('🗑️ 历史已清空');
+            }
+        }
+        
+        // ========== 历史记录 ==========
+        function renderHistory(history) {
+            const container = document.getElementById('historyList');
+            const countBadge = document.getElementById('countBadge');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+                countBadge.textContent = '0';
+                return;
+            }
+            
+            countBadge.textContent = history.length;
+            
+            let html = '';
+            history.forEach((item, index) => {
+                const displayText = item.length > 50 ? item.slice(0, 50) + '...' : item;
+                html += `
+                    <div class="history-item" onclick="useHistory(${index})">
+                        <div>${displayText}</div>
+                        <div class="time">#${index + 1}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
+        function useHistory(index) {
+            // 从历史中获取内容并复制到剪贴板
+            const history = JSON.parse(localStorage.getItem('clipboardHistory') || '[]');
+            if (history && history[index]) {
+                const text = history[index];
+                clipboard.writeText(text);
+                showNotification('✅ 已复制到剪贴板: ' + text.slice(0, 30) + (text.length > 30 ? '...' : ''));
+                readFromClipboard();
+            }
+        }
+        
+        // ========== 通知 ==========
+        function showNotification(message) {
+            const el = document.getElementById('notification');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 2000);
+        }
+        
+        // ========== 接收主进程消息 ==========
+        // 当历史更新时
+        ipcRenderer.on('history-updated', (event, history) => {
+            localStorage.setItem('clipboardHistory', JSON.stringify(history));
+            renderHistory(history);
+        });
+        
+        // 当剪贴板更新时
+        ipcRenderer.on('clipboard-updated', (event, text) => {
+            showNotification('📋 剪贴板已更新: ' + text.slice(0, 30) + (text.length > 30 ? '...' : ''));
+            readFromClipboard();
+        });
+        
+        // ========== 初始化 ==========
+        window.onload = function() {
+            readFromClipboard();
+            
+            // 请求历史记录
+            const history = ipcRenderer.sendSync('get-history');
+            localStorage.setItem('clipboardHistory', JSON.stringify(history));
+            renderHistory(history);
+        };
+        
+        // 页面关闭前保存
+        window.addEventListener('beforeunload', () => {
+            // 保存状态
+        });
+    </script>
+</body>
+</html>
