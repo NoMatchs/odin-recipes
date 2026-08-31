@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D 图片球体 | 百图环绕</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+            z-index: 10;
+        }
+        #info a {
+            color: #88ccff;
+            pointer-events: auto;
+            text-decoration: none;
+        }
+        #info a:hover {
+            text-decoration: underline;
+        }
+        /* 加载提示 (简单处理) */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 24px;
+            border-radius: 40px;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
+            pointer-events: none;
+        }
+        @media (max-width: 600px) {
+            #info { font-size: 12px; bottom: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">✨ 加载图片中...</div>
+    <div id="info">🌍 拖动旋转 · 滚轮缩放 | 图片数量: <span id="countDisplay">100</span>+</div>
+
+    <!-- 引入 Three.js 核心库和扩展 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景、相机、渲染器 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20); // 深邃星空背景
+
+        // 相机：透视相机
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8); // 相机位置
+
+        // WebGL 渲染器
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // CSS2D 渲染器 (用于文字标签，可选，但这里为了展示图片更清晰使用 Sprite)
+        // 但为了更好的图片显示，我们使用 Sprite，所以不需要 CSS2DRenderer
+        
+        // 轨道控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.8;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+        controls.enableZoom = true;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // --- 生成图片球体 ---
+        // 图片数量：动态生成，可调整
+        const IMAGE_COUNT = 120; // 设定为120，展示更多图片，也可以改为100
+        // 更新显示数量
+        document.getElementById('countDisplay').textContent = IMAGE_COUNT;
+
+        // 存放所有图片 Sprite 的数组 (便于后续操作)
+        const imageSprites = [];
+
+        // 图片尺寸 (在3D空间中的大小)
+        const SPRITE_SIZE = 0.6; 
+        // 球体半径
+        const RADIUS = 3.2;
+
+        // 使用随机图片 (来自 picsum.photos 的占位图，多种尺寸和随机种子)
+        // 为了确保每张图不同，使用不同的随机ID
+        const baseUrl = 'https://picsum.photos/seed/';
+
+        // 创建纹理加载器
+        const loader = new THREE.TextureLoader();
+        // 为了管理加载完成状态 (简单处理，加载完成后隐藏 loading)
+        let loadedCount = 0;
+
+        // 辅助: 生成球面上的均匀分布 (使用黄金角度或随机)
+        // 采用 Fibonacci 球体算法 (黄金角度) 使点均匀分布，视觉效果更佳
+        function fibonacciSphere(samples, radius) {
+            const points = [];
+            const phi = Math.PI * (3 - Math.sqrt(5));  // 黄金角
+            for (let i = 0; i < samples; i++) {
+                const y = 1 - (i / (samples - 1)) * 2;  // y 从 1 到 -1
+                const radiusAtY = Math.sqrt(1 - y * y);
+                const theta = phi * i;
+                const x = Math.cos(theta) * radiusAtY;
+                const z = Math.sin(theta) * radiusAtY;
+                points.push(new THREE.Vector3(x * radius, y * radius, z * radius));
+            }
+            return points;
+        }
+
+        const positions = fibonacciSphere(IMAGE_COUNT, RADIUS);
+
+        // 存储所有 sprite 以便后续可能更新 (但这里直接添加到场景)
+        positions.forEach((pos, index) => {
+            // 每张图片使用不同的 seed，确保图片不同 (从1到IMAGE_COUNT)
+            const seed = index + 1;
+            // 为了增加变化，也加上随机参数，但使用固定seed保证一致性
+            // 使用宽高比 1:1 的图片，或者随机宽高，这里使用 200x200 或 300x300 的方形
+            const imgUrl = `${baseUrl}${seed}?w=300&h=300&t=${Date.now()}`; // 加上时间戳避免缓存，但为了性能可以不加
+
+            // 创建 Sprite 材质
+            const material = new THREE.SpriteMaterial({
+                map: loader.load(imgUrl, 
+                    // 加载完成回调
+                    () => {
+                        loadedCount++;
+                        if (loadedCount >= IMAGE_COUNT) {
+                            document.getElementById('loading').style.display = 'none';
+                        }
+                    },
+                    undefined,
+                    // 错误回调
+                    (err) => {
+                        console.warn('图片加载失败，使用备用颜色', err);
+                        // 使用纯色替代
+                        material.color.setHex(0x88aaff);
+                        loadedCount++;
+                        if (loadedCount >= IMAGE_COUNT) {
+                            document.getElementById('loading').style.display = 'none';
+                        }
+                    }
+                ),
+                transparent: true,
+                depthTest: true,
+                depthWrite: false,
+                // 让图片边缘柔和一点
+                opacity: 0.95,
+                rotation: 0, // 可旋转
+            });
+
+            // 创建 Sprite 并设置位置
+            const sprite = new THREE.Sprite(material);
+            sprite.position.copy(pos);
+            
+            // 调整大小
+            sprite.scale.set(SPRITE_SIZE, SPRITE_SIZE, 1);
+
+            // 添加一点随机旋转 (让图片朝向球心，但 Sprite 始终面向相机，所以不需要旋转)
+            // 但为了更有趣，可以给每个 sprite 一个小随机偏移? 但保持清晰度，不处理
+
+            scene.add(sprite);
+            imageSprites.push(sprite);
+        });
+
+        // 如果图片数量少于实际加载数量，隐藏加载提示 (防止有些图片加载慢)
+        // 设置一个超时隐藏
+        setTimeout(() => {
+            document.getElementById('loading').style.display = 'none';
+        }, 5000);
+
+        // --- 添加星星背景 (小粒子) 增强视觉效果 ---
+        function addStarField() {
+            const vertices = [];
+            for (let i = 0; i < 2000; i++) {
+                const x = (Math.random() - 0.5) * 200;
+                const y = (Math.random() - 0.5) * 200;
+                const z = (Math.random() - 0.5) * 200 - 30; // 在球体后方
+                vertices.push(x, y, z);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.25,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+            const stars = new THREE.Points(geometry, material);
+            scene.add(stars);
+        }
+        addStarField();
+
+        // 添加一些柔和的光晕 (点光源)
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        const light = new THREE.PointLight(0xffffff, 0.8);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        
+        const light2 = new THREE.PointLight(0x446688, 0.5);
+        light2.position.set(-10, -5, 5);
+        scene.add(light2);
+
+        // --- 辅助线 (可选) 为了视觉效果更好，加上淡淡的坐标环 ---
+        function addHelperRing() {
+            const ringGeometry = new THREE.TorusGeometry(RADIUS + 0.1, 0.02, 16, 100);
+            const ringMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x88aaff, 
+                transparent: true, 
+                opacity: 0.15,
+                wireframe: false
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = Math.PI / 2;
+            scene.add(ring);
+
+            const ring2 = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring2.rotation.y = Math.PI / 2;
+            scene.add(ring2);
+
+            const ring3 = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring3.rotation.z = Math.PI / 2;
+            scene.add(ring3);
+        }
+        addHelperRing();
+
+        // 添加一些浮动粒子 (围绕球体)
+        function addGlowParticles() {
+            const particleCount = 400;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                const r = RADIUS + 0.6 + Math.random() * 0.8;
+                positions[i*3] = Math.sin(phi) * Math.cos(theta) * r;
+                positions[i*3+1] = Math.sin(phi) * Math.sin(theta) * r;
+                positions[i*3+2] = Math.cos(phi) * r;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({
+                color: 0x88ccff,
+                size: 0.04,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+        addGlowParticles();
+
+        // --- 动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 自动旋转
+            controls.update();
+
+            // 让星星缓慢旋转
+            // 可以找到星星并旋转，但这里为了简单，省略
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // --- 窗口自适应 ---
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 用户交互时暂停自动旋转
+        renderer.domElement.addEventListener('mousedown', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('mouseup', () => {
+            // 可以设置几秒后恢复，或者保持手动，这里设置为3秒后恢复
+            setTimeout(() => {
+                controls.autoRotate = true;
+            }, 3000);
+        });
+        // 触摸设备支持
+        renderer.domElement.addEventListener('touchstart', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('touchend', () => {
+            setTimeout(() => {
+                controls.autoRotate = true;
+            }, 3000);
+        });
+
+        console.log('3D 图片球体已加载，图片数量:', IMAGE_COUNT);
+    </script>
+</body>
+</html>

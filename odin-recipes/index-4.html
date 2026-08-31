@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D 图片球体 · 全景画廊</title>
+    <meta name="description" content="一个创新的3D图片展示工具，将您的图片排列成球体，支持点击放大查看">
+    <meta name="keywords" content="3D图片, 球体展示, 图片画廊, 全景, 交互式">
+    
+    <!-- Open Graph / 社交分享 -->
+    <meta property="og:title" content="3D 图片球体 · 全景画廊">
+    <meta property="og:description" content="将图片排列成3D球体，自由旋转浏览">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#0a0a20">
+
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a20;
+            overflow: hidden;
+            color: white;
+            height: 100vh;
+        }
+
+        /* ===== 网站头部 ===== */
+        #header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            padding: 16px 24px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        #header .site-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+        }
+        #header .site-subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 2px;
+            -webkit-text-fill-color: rgba(255,255,255,0.4);
+        }
+        #header .header-right {
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        #header .header-right .stats {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.06);
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        #header .header-right .stats strong {
+            color: #88ccff;
+        }
+
+        /* ===== 3D 容器 ===== */
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* ===== 上传控制栏 ===== */
+        #controls {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 10px 22px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            flex-wrap: wrap;
+            justify-content: center;
+            pointer-events: auto;
+        }
+        #controls label {
+            cursor: pointer;
+            padding: 7px 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+        #controls label:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 24px rgba(102, 126, 234, 0.4);
+        }
+        #controls input[type="file"] {
+            display: none;
+        }
+        #controls button {
+            padding: 7px 18px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+        #controls button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+        }
+        #controls button.danger:hover {
+            background: rgba(255, 70, 70, 0.2);
+            border-color: rgba(255, 70, 70, 0.3);
+            color: #ff6b6b;
+        }
+        #controls .divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(255,255,255,0.08);
+        }
+
+        /* ===== 底部信息 ===== */
+        #footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            letter-spacing: 0.5px;
+        }
+        #footer a {
+            color: rgba(255,255,255,0.3);
+            pointer-events: auto;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        #footer a:hover {
+            color: rgba(255,255,255,0.6);
+        }
+        #footer .heart {
+            color: #ff6b6b;
+        }
+
+        /* ===== 加载提示 ===== */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 14px 28px;
+            border-radius: 40px;
+            z-index: 50;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.06);
+            display: none;
+            text-align: center;
+            pointer-events: none;
+        }
+        #loading .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid rgba(255,255,255,0.1);
+            border-top: 2.5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== 空状态提示 ===== */
+        #empty-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.15);
+            font-size: 20px;
+            z-index: 5;
+            text-align: center;
+            pointer-events: none;
+            line-height: 1.6;
+        }
+        #empty-hint .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        #empty-hint .sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.08);
+        }
+
+        /* ===== 模态框 ===== */
+        #modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            z-index: 999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            animation: fadeIn 0.25s ease;
+        }
+        #modal.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        #modal img {
+            max-width: 90vw;
+            max-height: 82vh;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        #modal .close-hint {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.25);
+            font-size: 13px;
+            letter-spacing: 1px;
+            background: rgba(255,255,255,0.03);
+            padding: 6px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.04);
+            pointer-events: none;
+        }
+        #modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 28px;
+            font-size: 30px;
+            color: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            background: none;
+            border: none;
+            padding: 4px 12px;
+            line-height: 1;
+        }
+        #modal .close-btn:hover {
+            color: white;
+            transform: rotate(90deg);
+        }
+        #modal .counter {
+            position: absolute;
+            top: 24px;
+            left: 28px;
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.04);
+            pointer-events: none;
+        }
+        #modal .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.3);
+            font-size: 36px;
+            padding: 18px 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+            user-select: none;
+            line-height: 1;
+        }
+        #modal .nav-btn:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+        #modal .nav-btn.prev { left: 16px; }
+        #modal .nav-btn.next { right: 16px; }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            #header .site-title { font-size: 18px; }
+            #header .site-subtitle { font-size: 11px; }
+            #header .header-right .stats { font-size: 11px; padding: 2px 12px; }
+            #controls { bottom: 70px; padding: 8px 16px; gap: 8px; width: 92%; }
+            #controls label, #controls button { font-size: 12px; padding: 6px 14px; }
+            #controls .divider { height: 22px; }
+            #empty-hint { font-size: 16px; }
+            #empty-hint .icon { font-size: 36px; }
+            #footer { font-size: 10px; bottom: 12px; }
+            #modal .nav-btn { padding: 12px 8px; font-size: 28px; }
+            #modal .nav-btn.prev { left: 6px; }
+            #modal .nav-btn.next { right: 6px; }
+            #modal .close-btn { top: 12px; right: 16px; font-size: 24px; }
+            #modal .counter { top: 14px; left: 16px; font-size: 12px; }
+            #modal .close-hint { bottom: 16px; font-size: 11px; padding: 4px 14px; }
+        }
+        @media (max-width: 480px) {
+            #header { padding: 12px 16px; }
+            #header .site-title { font-size: 16px; }
+            #controls { bottom: 60px; padding: 6px 12px; gap: 6px; }
+            #controls label, #controls button { font-size: 11px; padding: 5px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 网站头部 ===== -->
+    <header id="header">
+        <div>
+            <div class="site-title">✦ 3D 全景画廊</div>
+            <div class="site-subtitle">上传图片 · 自由浏览 · 点击放大</div>
+        </div>
+        <div class="header-right">
+            <span class="stats">📷 <strong id="countDisplay">0</strong> 张</span>
+        </div>
+    </header>
+
+    <!-- ===== 空状态提示 ===== -->
+    <div id="empty-hint">
+        <span class="icon">🖼️</span>
+        上传图片开始展示<br>
+        <span class="sub">点击「选择图片」或拖拽文件到页面</span>
+    </div>
+
+    <!-- ===== 加载提示 ===== -->
+    <div id="loading">
+        <span class="spinner"></span> 加载图片中...
+    </div>
+
+    <!-- ===== 3D 容器 ===== -->
+    <div id="canvas-container"></div>
+
+    <!-- ===== 上传控制栏 ===== -->
+    <div id="controls">
+        <label for="fileInput">📁 选择图片</label>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <span class="divider"></span>
+        <button id="resetBtn" class="danger">🗑️ 清空</button>
+        <span class="divider"></span>
+        <button id="autoRotateBtn">⏸️ 暂停旋转</button>
+    </div>
+
+    <!-- ===== 底部信息 ===== -->
+    <footer id="footer">
+        <span>🖱️ 拖动旋转 · 滚轮缩放 · 点击图片查看大图</span>
+        <span style="margin: 0 8px; opacity:0.2;">|</span>
+        <span>用 <span class="heart">❤</span> 制作 · 仅供展示</span>
+    </footer>
+
+    <!-- ===== 模态框 ===== -->
+    <div id="modal">
+        <button class="close-btn" id="modalClose">✕</button>
+        <span class="counter" id="modalCounter">1 / 0</span>
+        <button class="nav-btn prev" id="modalPrev">‹</button>
+        <button class="nav-btn next" id="modalNext">›</button>
+        <img id="modalImage" src="" alt="图片预览">
+        <div class="close-hint">点击背景关闭 · 键盘 ← → 切换</div>
+    </div>
+
+    <!-- ===== Three.js ===== -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- DOM 引用 ---
+        const container = document.getElementById('canvas-container');
+        const fileInput = document.getElementById('fileInput');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoRotateBtn = document.getElementById('autoRotateBtn');
+        const countDisplay = document.getElementById('countDisplay');
+        const loadingEl = document.getElementById('loading');
+        const emptyHint = document.getElementById('empty-hint');
+
+        // 模态框
+        const modal = document.getElementById('modal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCounter = document.getElementById('modalCounter');
+        const modalClose = document.getElementById('modalClose');
+        const modalPrev = document.getElementById('modalPrev');
+        const modalNext = document.getElementById('modalNext');
+
+        // --- Three.js 初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // 控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.rotateSpeed = 0.7;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.8;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // --- 灯光 ---
+        const ambient = new THREE.AmbientLight(0x404060);
+        scene.add(ambient);
+        const light = new THREE.PointLight(0xffffff, 0.7);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        const light2 = new THREE.PointLight(0x446688, 0.4);
+        light2.position.set(-10, -5, 5);
+        scene.add(light2);
+
+        // --- 星空 ---
+        function addStars() {
+            const vertices = [];
+            for (let i = 0; i < 2500; i++) {
+                vertices.push(
+                    (Math.random() - 0.5) * 250,
+                    (Math.random() - 0.5) * 250,
+                    (Math.random() - 0.5) * 250 - 40
+                );
+            }
+            const geom = new THREE.BufferGeometry();
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0x88bbff,
+                size: 0.15,
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending,
+            });
+            const stars = new THREE.Points(geom, mat);
+            scene.add(stars);
+            return stars;
+        }
+        const starField = addStars();
+
+        // --- 辅助环 ---
+        function addRings() {
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x88aaff,
+                transparent: true,
+                opacity: 0.06,
+                wireframe: false,
+            });
+            const ringGeo = new THREE.TorusGeometry(3.6, 0.015, 16, 120);
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            ring1.rotation.x = Math.PI / 2;
+            scene.add(ring1);
+            const ring2 = new THREE.Mesh(ringGeo, ringMat);
+            ring2.rotation.y = Math.PI / 2;
+            scene.add(ring2);
+            const ring3 = new THREE.Mesh(ringGeo, ringMat);
+            ring3.rotation.z = Math.PI / 2;
+            scene.add(ring3);
+        }
+        addRings();
+
+        // --- 图片数据 ---
+        const imageGroup = new THREE.Group();
+        scene.add(imageGroup);
+
+        let imageUrls = [];
+        let spriteList = [];
+        let isAutoRotate = true;
+
+        // --- 构建球体 ---
+        function buildSphere(urls) {
+            // 显示/隐藏空状态
+            if (urls.length === 0) {
+                emptyHint.style.display = 'block';
+            } else {
+                emptyHint.style.display = 'none';
+                loadingEl.style.display = 'block';
+            }
+
+            // 清除旧图片
+            while (imageGroup.children.length > 0) {
+                const child = imageGroup.children[0];
+                if (child.material) {
+                    if (child.material.map) child.material.map.dispose();
+                    child.material.dispose();
+                }
+                imageGroup.remove(child);
+            }
+            spriteList = [];
+
+            if (urls.length === 0) {
+                countDisplay.textContent = '0';
+                loadingEl.style.display = 'none';
+                return;
+            }
+
+            const count = urls.length;
+            countDisplay.textContent = count;
+
+            const radius = Math.max(2.5, Math.min(4.8, 1.0 + count * 0.028));
+            const size = Math.max(0.25, Math.min(0.75, 0.85 - count * 0.004));
+
+            function fibonacciSphere(samples, r) {
+                const points = [];
+                const phi = Math.PI * (3 - Math.sqrt(5));
+                for (let i = 0; i < samples; i++) {
+                    const y = 1 - (i / (samples - 1)) * 2;
+                    const radiusAtY = Math.sqrt(1 - y * y);
+                    const theta = phi * i;
+                    points.push(new THREE.Vector3(
+                        Math.cos(theta) * radiusAtY * r,
+                        y * r,
+                        Math.sin(theta) * radiusAtY * r
+                    ));
+                }
+                return points;
+            }
+
+            const positions = fibonacciSphere(count, radius);
+            const loader = new THREE.TextureLoader();
+            let loaded = 0;
+
+            urls.forEach((url, index) => {
+                const material = new THREE.SpriteMaterial({
+                    map: loader.load(url, 
+                        () => {
+                            loaded++;
+                            if (loaded >= count) loadingEl.style.display = 'none';
+                        },
+                        undefined,
+                        () => {
+                            material.color.setHex(0x667eea);
+                            loaded++;
+                            if (loaded >= count) loadingEl.style.display = 'none';
+                        }
+                    ),
+                    transparent: true,
+                    depthTest: true,
+                    depthWrite: false,
+                });
+
+                const sprite = new THREE.Sprite(material);
+                sprite.position.copy(positions[index]);
+                sprite.scale.set(size, size, 1);
+                sprite.userData = { url, index };
+                imageGroup.add(sprite);
+                spriteList.push(sprite);
+            });
+
+            if (loaded >= count) loadingEl.style.display = 'none';
+        }
+
+        // --- 处理上传 ---
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (validFiles.length === 0) {
+                alert('请选择图片文件 (支持 jpg, png, gif, webp 等)');
+                return;
+            }
+            if (validFiles.length > 300) {
+                alert('图片数量过多（建议不超过300张），请分批上传');
+                return;
+            }
+
+            const urls = validFiles.map(f => URL.createObjectURL(f));
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = urls;
+
+            buildSphere(urls);
+        }
+
+        // --- 清空 ---
+        function resetAll() {
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = [];
+            spriteList = [];
+            buildSphere([]);
+            fileInput.value = '';
+            closeModal();
+        }
+
+        // --- 自动旋转控制 ---
+        function toggleAutoRotate() {
+            isAutoRotate = !isAutoRotate;
+            controls.autoRotate = isAutoRotate;
+            autoRotateBtn.textContent = isAutoRotate ? '⏸️ 暂停旋转' : '▶️ 恢复旋转';
+        }
+
+        autoRotateBtn.addEventListener('click', toggleAutoRotate);
+
+        // --- 模态框 ---
+        let currentIndex = 0;
+
+        function openModal(index) {
+            if (spriteList.length === 0 || index < 0 || index >= spriteList.length) return;
+            currentIndex = index;
+            const url = spriteList[index].userData.url;
+            modalImage.src = url;
+            modalCounter.textContent = `${index + 1} / ${spriteList.length}`;
+            modal.classList.add('active');
+            controls.autoRotate = false;
+            autoRotateBtn.textContent = '▶️ 恢复旋转';
+            isAutoRotate = false;
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            // 恢复自动旋转（如果之前是开启的）
+            if (isAutoRotate) {
+                controls.autoRotate = true;
+                autoRotateBtn.textContent = '⏸️ 暂停旋转';
+            }
+        }
+
+        function prevImage() {
+            if (spriteList.length === 0) return;
+            const newIndex = (currentIndex - 1 + spriteList.length) % spriteList.length;
+            openModal(newIndex);
+        }
+
+        function nextImage() {
+            if (spriteList.length === 0) return;
+            const newIndex = (currentIndex + 1) % spriteList.length;
+            openModal(newIndex);
+        }
+
+        // --- 点击检测 ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onCanvasClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(spriteList);
+
+            if (intersects.length > 0) {
+                const clicked = intersects[0].object;
+                if (clicked.userData && clicked.userData.index !== undefined) {
+                    openModal(clicked.userData.index);
+                }
+            }
+        }
+
+        renderer.domElement.addEventListener('click', onCanvasClick);
+
+        // --- 模态框事件 ---
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        modalPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            prevImage();
+        });
+        modalNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nextImage();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('active')) return;
+            if (e.key === 'Escape') closeModal();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
+        });
+
+        // --- 上传事件 ---
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        resetBtn.addEventListener('click', resetAll);
+
+        // 拖拽上传
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        // --- 窗口自适应 ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 渲染循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 初始状态 ---
+        countDisplay.textContent = '0';
+        loadingEl.style.display = 'none';
+        emptyHint.style.display = 'block';
+
+        console.log('✨ 3D 全景画廊已启动！');
+        console.log('📁 上传图片或拖拽文件到页面');
+        console.log('🖱️ 点击任意图片可放大查看');
+    </script>
+</body>
+</html>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D 图片球体 - 点击查看大图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a0a20;
+            overflow: hidden;
+            color: white;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* 顶部控制面板 */
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #controls label {
+            cursor: pointer;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        #controls label:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+        #controls input[type="file"] {
+            display: none;
+        }
+        #controls button {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        #controls button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #controls button.danger:hover {
+            background: rgba(255, 70, 70, 0.3);
+            border-color: rgba(255, 70, 70, 0.4);
+        }
+        #status {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0 8px;
+        }
+        #status strong {
+            color: white;
+        }
+
+        /* 右下角提示 */
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* 加载提示 */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 16px 32px;
+            border-radius: 40px;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+            text-align: center;
+        }
+        #loading .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== 模态框（点击图片放大查看） ===== */
+        #modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            z-index: 999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            animation: fadeIn 0.3s ease;
+        }
+        #modal.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        #modal img {
+            max-width: 90vw;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 80px rgba(0,0,0,0.8);
+            border: 2px solid rgba(255,255,255,0.1);
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        #modal .close-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.4);
+            font-size: 14px;
+            letter-spacing: 2px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 24px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        #modal .close-btn {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            font-size: 32px;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: color 0.3s, transform 0.3s;
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            line-height: 1;
+        }
+        #modal .close-btn:hover {
+            color: white;
+            transform: rotate(90deg);
+        }
+        #modal .counter {
+            position: absolute;
+            top: 28px;
+            left: 32px;
+            color: rgba(255,255,255,0.4);
+            font-size: 14px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        /* 左右导航箭头 */
+        #modal .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+            font-size: 40px;
+            padding: 20px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+            user-select: none;
+            line-height: 1;
+        }
+        #modal .nav-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        #modal .nav-btn.prev {
+            left: 20px;
+        }
+        #modal .nav-btn.next {
+            right: 20px;
+        }
+        @media (max-width: 600px) {
+            #modal .nav-btn {
+                padding: 14px 10px;
+                font-size: 28px;
+            }
+            #modal .nav-btn.prev { left: 8px; }
+            #modal .nav-btn.next { right: 8px; }
+            #modal .close-btn { top: 12px; right: 16px; font-size: 26px; }
+            #modal .counter { top: 14px; left: 16px; font-size: 12px; }
+            #modal .close-hint { bottom: 20px; font-size: 12px; padding: 6px 16px; }
+        }
+
+        #countDisplay {
+            color: #88ccff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <span class="spinner"></span> 加载图片中...
+    </div>
+
+    <div id="controls">
+        <label for="fileInput">📁 选择图片 (多选)</label>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <button id="resetBtn" class="danger">🗑️ 清空所有</button>
+        <span id="status">图片: <strong id="countDisplay">0</strong> 张</span>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="info">🖱️ 拖动旋转 · 滚轮缩放 · <strong style="color:rgba(255,255,255,0.6);">点击图片查看大图</strong></div>
+
+    <!-- ===== 模态框 ===== -->
+    <div id="modal">
+        <button class="close-btn" id="modalClose">✕</button>
+        <span class="counter" id="modalCounter">1 / 0</span>
+        <button class="nav-btn prev" id="modalPrev">‹</button>
+        <button class="nav-btn next" id="modalNext">›</button>
+        <img id="modalImage" src="" alt="点击查看大图">
+        <div class="close-hint">点击任意处关闭 · 键盘 ← → 切换</div>
+    </div>
+
+    <!-- Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Raycaster } from 'three';
+
+        // --- DOM 引用 ---
+        const container = document.getElementById('canvas-container');
+        const fileInput = document.getElementById('fileInput');
+        const resetBtn = document.getElementById('resetBtn');
+        const countDisplay = document.getElementById('countDisplay');
+        const loadingEl = document.getElementById('loading');
+
+        // 模态框
+        const modal = document.getElementById('modal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCounter = document.getElementById('modalCounter');
+        const modalClose = document.getElementById('modalClose');
+        const modalPrev = document.getElementById('modalPrev');
+        const modalNext = document.getElementById('modalNext');
+
+        // --- Three.js 初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // 控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.8;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // --- 灯光 ---
+        const ambient = new THREE.AmbientLight(0x404060);
+        scene.add(ambient);
+        const light = new THREE.PointLight(0xffffff, 0.8);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        const light2 = new THREE.PointLight(0x446688, 0.5);
+        light2.position.set(-10, -5, 5);
+        scene.add(light2);
+
+        // --- 星空 ---
+        function addStars() {
+            const vertices = [];
+            for (let i = 0; i < 2000; i++) {
+                vertices.push(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200 - 30
+                );
+            }
+            const geom = new THREE.BufferGeometry();
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.2,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            const stars = new THREE.Points(geom, mat);
+            scene.add(stars);
+        }
+        addStars();
+
+        // --- 辅助环 ---
+        function addRings() {
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x88aaff,
+                transparent: true,
+                opacity: 0.1,
+                wireframe: false
+            });
+            const ringGeo = new THREE.TorusGeometry(3.5, 0.02, 16, 100);
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            ring1.rotation.x = Math.PI / 2;
+            scene.add(ring1);
+            const ring2 = new THREE.Mesh(ringGeo, ringMat);
+            ring2.rotation.y = Math.PI / 2;
+            scene.add(ring2);
+            const ring3 = new THREE.Mesh(ringGeo, ringMat);
+            ring3.rotation.z = Math.PI / 2;
+            scene.add(ring3);
+        }
+        addRings();
+
+        // --- 存储图片数据 ---
+        const imageGroup = new THREE.Group();
+        scene.add(imageGroup);
+
+        let imageUrls = [];
+        let spriteList = []; // 存储 sprite 和对应的 url
+
+        // --- Raycaster 点击检测 ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // --- 构建球体 ---
+        function buildSphere(urls) {
+            if (urls.length > 0) {
+                loadingEl.style.display = 'block';
+            }
+
+            // 清除旧图片
+            while (imageGroup.children.length > 0) {
+                const child = imageGroup.children[0];
+                if (child.material) {
+                    if (child.material.map) {
+                        child.material.map.dispose();
+                    }
+                    child.material.dispose();
+                }
+                imageGroup.remove(child);
+            }
+            spriteList = [];
+
+            if (urls.length === 0) {
+                countDisplay.textContent = '0';
+                loadingEl.style.display = 'none';
+                return;
+            }
+
+            const count = urls.length;
+            countDisplay.textContent = count;
+
+            const radius = Math.max(2.5, Math.min(4.5, 1.2 + count * 0.025));
+            const size = Math.max(0.3, Math.min(0.8, 0.9 - count * 0.004));
+
+            function fibonacciSphere(samples, r) {
+                const points = [];
+                const phi = Math.PI * (3 - Math.sqrt(5));
+                for (let i = 0; i < samples; i++) {
+                    const y = 1 - (i / (samples - 1)) * 2;
+                    const radiusAtY = Math.sqrt(1 - y * y);
+                    const theta = phi * i;
+                    points.push(new THREE.Vector3(
+                        Math.cos(theta) * radiusAtY * r,
+                        y * r,
+                        Math.sin(theta) * radiusAtY * r
+                    ));
+                }
+                return points;
+            }
+
+            const positions = fibonacciSphere(count, radius);
+            const loader = new THREE.TextureLoader();
+            let loaded = 0;
+
+            urls.forEach((url, index) => {
+                const material = new THREE.SpriteMaterial({
+                    map: loader.load(url, 
+                        () => {
+                            loaded++;
+                            if (loaded >= count) loadingEl.style.display = 'none';
+                        },
+                        undefined,
+                        () => {
+                            material.color.setHex(0x88aaff);
+                            loaded++;
+                            if (loaded >= count) loadingEl.style.display = 'none';
+                        }
+                    ),
+                    transparent: true,
+                    depthTest: true,
+                    depthWrite: false,
+                });
+
+                const sprite = new THREE.Sprite(material);
+                sprite.position.copy(positions[index]);
+                sprite.scale.set(size, size, 1);
+                
+                // 存储引用，用于点击时获取图片
+                sprite.userData = { url: url, index: index };
+                
+                imageGroup.add(sprite);
+                spriteList.push(sprite);
+            });
+
+            if (loaded >= count) loadingEl.style.display = 'none';
+        }
+
+        // --- 处理上传 ---
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (validFiles.length === 0) {
+                alert('请选择图片文件');
+                return;
+            }
+            if (validFiles.length > 200) {
+                alert('图片数量过多（最多200张），请分批上传');
+                return;
+            }
+
+            const urls = validFiles.map(f => URL.createObjectURL(f));
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = urls;
+
+            buildSphere(urls);
+        }
+
+        // --- 清空 ---
+        function resetAll() {
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = [];
+            spriteList = [];
+            buildSphere([]);
+            fileInput.value = '';
+            closeModal();
+        }
+
+        // --- 模态框控制 ---
+        let currentIndex = 0;
+
+        function openModal(index) {
+            if (spriteList.length === 0 || index < 0 || index >= spriteList.length) return;
+            currentIndex = index;
+            const url = spriteList[index].userData.url;
+            modalImage.src = url;
+            modalCounter.textContent = `${index + 1} / ${spriteList.length}`;
+            modal.classList.add('active');
+            // 暂停自动旋转
+            controls.autoRotate = false;
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            // 延迟恢复自动旋转
+            setTimeout(() => { controls.autoRotate = true; }, 500);
+        }
+
+        function prevImage() {
+            if (spriteList.length === 0) return;
+            const newIndex = (currentIndex - 1 + spriteList.length) % spriteList.length;
+            openModal(newIndex);
+        }
+
+        function nextImage() {
+            if (spriteList.length === 0) return;
+            const newIndex = (currentIndex + 1) % spriteList.length;
+            openModal(newIndex);
+        }
+
+        // --- 点击检测 (Three.js 点击) ---
+        function onCanvasClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // 检测所有 sprite
+            const intersects = raycaster.intersectObjects(spriteList);
+
+            if (intersects.length > 0) {
+                const clicked = intersects[0].object;
+                if (clicked.userData && clicked.userData.index !== undefined) {
+                    openModal(clicked.userData.index);
+                }
+            }
+        }
+
+        renderer.domElement.addEventListener('click', onCanvasClick);
+
+        // --- 模态框事件 ---
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        modalPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            prevImage();
+        });
+        modalNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nextImage();
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('active')) return;
+            if (e.key === 'Escape') closeModal();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
+        });
+
+        // --- 上传事件 ---
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        resetBtn.addEventListener('click', resetAll);
+
+        // 拖拽上传
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        // --- 窗口自适应 ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 自动旋转控制 ---
+        renderer.domElement.addEventListener('mousedown', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('mouseup', () => {
+            setTimeout(() => { controls.autoRotate = true; }, 3000);
+        });
+        renderer.domElement.addEventListener('touchstart', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('touchend', () => {
+            setTimeout(() => { controls.autoRotate = true; }, 3000);
+        });
+
+        // --- 渲染 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 初始状态
+        countDisplay.textContent = '0';
+        loadingEl.style.display = 'none';
+
+        console.log('✨ 3D 图片球体已启动，点击图片可查看大图！');
+    </script>
+</body>
+</html>

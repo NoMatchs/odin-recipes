@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D 图片球体 - 本地图片上传</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a0a20;
+            overflow: hidden;
+            color: white;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* 顶部控制面板 */
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #controls label {
+            cursor: pointer;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        #controls label:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+        #controls input[type="file"] {
+            display: none;
+        }
+        #controls button {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        #controls button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #controls button.danger:hover {
+            background: rgba(255, 70, 70, 0.3);
+            border-color: rgba(255, 70, 70, 0.4);
+        }
+        #status {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0 8px;
+        }
+        #status strong {
+            color: white;
+        }
+
+        /* 右下角信息 */
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* 加载提示 */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0,0,0,0.7);
+            padding: 16px 32px;
+            border-radius: 40px;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+            text-align: center;
+        }
+        #loading .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #countDisplay {
+            color: #88ccff;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            #controls {
+                top: 10px;
+                padding: 10px 16px;
+                gap: 8px;
+                border-radius: 30px;
+                width: 95%;
+            }
+            #controls label, #controls button {
+                font-size: 12px;
+                padding: 6px 14px;
+            }
+            #status {
+                font-size: 11px;
+            }
+            #info {
+                font-size: 11px;
+                bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <span class="spinner"></span> 加载图片中...
+    </div>
+
+    <div id="controls">
+        <label for="fileInput">📁 选择图片 (多选)</label>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <button id="resetBtn" class="danger">🗑️ 清空所有</button>
+        <span id="status">图片: <strong id="countDisplay">0</strong> 张</span>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="info">🖱️ 拖动旋转 · 滚轮缩放 · 上传本地图片自动排列成球</div>
+
+    <!-- 引入 Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- DOM 引用 ---
+        const container = document.getElementById('canvas-container');
+        const fileInput = document.getElementById('fileInput');
+        const resetBtn = document.getElementById('resetBtn');
+        const countDisplay = document.getElementById('countDisplay');
+        const loadingEl = document.getElementById('loading');
+
+        // --- Three.js 初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // 控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.8;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // --- 灯光 ---
+        const ambient = new THREE.AmbientLight(0x404060);
+        scene.add(ambient);
+        const light = new THREE.PointLight(0xffffff, 0.8);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        const light2 = new THREE.PointLight(0x446688, 0.5);
+        light2.position.set(-10, -5, 5);
+        scene.add(light2);
+
+        // --- 星空背景 ---
+        function addStars() {
+            const vertices = [];
+            for (let i = 0; i < 2000; i++) {
+                vertices.push(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200 - 30
+                );
+            }
+            const geom = new THREE.BufferGeometry();
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.2,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            const stars = new THREE.Points(geom, mat);
+            scene.add(stars);
+        }
+        addStars();
+
+        // --- 辅助环 ---
+        function addRings() {
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x88aaff,
+                transparent: true,
+                opacity: 0.1,
+                wireframe: false
+            });
+            const ringGeo = new THREE.TorusGeometry(3.5, 0.02, 16, 100);
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            ring1.rotation.x = Math.PI / 2;
+            scene.add(ring1);
+            const ring2 = new THREE.Mesh(ringGeo, ringMat);
+            ring2.rotation.y = Math.PI / 2;
+            scene.add(ring2);
+            const ring3 = new THREE.Mesh(ringGeo, ringMat);
+            ring3.rotation.z = Math.PI / 2;
+            scene.add(ring3);
+        }
+        addRings();
+
+        // --- 存储图片 Sprite 的组 ---
+        const imageGroup = new THREE.Group();
+        scene.add(imageGroup);
+
+        // 当前图片数据
+        let imageUrls = [];
+
+        // --- 核心函数：根据图片 URL 列表构建球体 ---
+        function buildSphere(urls) {
+            // 显示加载提示
+            if (urls.length > 0) {
+                loadingEl.style.display = 'block';
+            }
+
+            // 清除旧图片
+            while (imageGroup.children.length > 0) {
+                const child = imageGroup.children[0];
+                if (child.material) {
+                    if (child.material.map) {
+                        child.material.map.dispose();
+                    }
+                    child.material.dispose();
+                }
+                imageGroup.remove(child);
+            }
+
+            if (urls.length === 0) {
+                countDisplay.textContent = '0';
+                loadingEl.style.display = 'none';
+                return;
+            }
+
+            const count = urls.length;
+            countDisplay.textContent = count;
+
+            // 球体半径根据图片数量自适应
+            const radius = Math.max(2.5, Math.min(4.5, 1.2 + count * 0.025));
+            // 图片大小自适应
+            const size = Math.max(0.3, Math.min(0.8, 0.9 - count * 0.004));
+
+            // 使用 Fibonacci 球体算法均匀分布
+            function fibonacciSphere(samples, r) {
+                const points = [];
+                const phi = Math.PI * (3 - Math.sqrt(5));
+                for (let i = 0; i < samples; i++) {
+                    const y = 1 - (i / (samples - 1)) * 2;
+                    const radiusAtY = Math.sqrt(1 - y * y);
+                    const theta = phi * i;
+                    points.push(new THREE.Vector3(
+                        Math.cos(theta) * radiusAtY * r,
+                        y * r,
+                        Math.sin(theta) * radiusAtY * r
+                    ));
+                }
+                return points;
+            }
+
+            const positions = fibonacciSphere(count, radius);
+            const loader = new THREE.TextureLoader();
+            let loaded = 0;
+
+            urls.forEach((url, index) => {
+                const material = new THREE.SpriteMaterial({
+                    map: loader.load(url, 
+                        () => {
+                            loaded++;
+                            if (loaded >= count) {
+                                loadingEl.style.display = 'none';
+                            }
+                        },
+                        undefined,
+                        () => {
+                            // 加载失败用纯色代替
+                            material.color.setHex(0x88aaff);
+                            loaded++;
+                            if (loaded >= count) {
+                                loadingEl.style.display = 'none';
+                            }
+                        }
+                    ),
+                    transparent: true,
+                    depthTest: true,
+                    depthWrite: false,
+                });
+
+                const sprite = new THREE.Sprite(material);
+                sprite.position.copy(positions[index]);
+                sprite.scale.set(size, size, 1);
+                imageGroup.add(sprite);
+            });
+
+            // 如果全部加载完成，隐藏 loading
+            if (loaded >= count) {
+                loadingEl.style.display = 'none';
+            }
+        }
+
+        // --- 处理上传的图片 ---
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (validFiles.length === 0) {
+                alert('请选择图片文件');
+                return;
+            }
+
+            // 限制最多 200 张，避免性能问题
+            if (validFiles.length > 200) {
+                alert('图片数量过多（最多200张），请分批上传');
+                return;
+            }
+
+            // 将图片转为 Object URL
+            const urls = validFiles.map(f => URL.createObjectURL(f));
+            
+            // 清空之前上传的图片（释放内存）
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = urls;
+
+            buildSphere(urls);
+        }
+
+        // --- 清空所有图片 ---
+        function resetAll() {
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+            imageUrls = [];
+            buildSphere([]);
+            fileInput.value = ''; // 重置 input
+        }
+
+        // --- 事件绑定 ---
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        resetBtn.addEventListener('click', resetAll);
+
+        // 拖拽上传支持
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        // --- 窗口自适应 ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 自动旋转控制 ---
+        renderer.domElement.addEventListener('mousedown', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('mouseup', () => {
+            setTimeout(() => { controls.autoRotate = true; }, 3000);
+        });
+        renderer.domElement.addEventListener('touchstart', () => {
+            controls.autoRotate = false;
+        });
+        renderer.domElement.addEventListener('touchend', () => {
+            setTimeout(() => { controls.autoRotate = true; }, 3000);
+        });
+
+        // --- 渲染循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 初始状态
+        countDisplay.textContent = '0';
+        loadingEl.style.display = 'none';
+
+        console.log('✨ 3D 图片球体已启动，上传您的图片吧！');
+    </script>
+</body>
+</html>
