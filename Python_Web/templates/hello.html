@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}你好，{{ name }} - Python Web框架{% endblock %}
+
+{% block content %}
+<div style="text-align: center;">
+    <div style="font-size: 4.5rem; margin-bottom: 6px;">👋</div>
+    <h1>你好，<span style="background: linear-gradient(135deg, #f093fb, #f5576c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ name }}</span>！</h1>
+</div>
+
+<div class="card" style="border-left-color: #4ecdc4;">
+    <h3><i class="fas fa-clock" style="color:#4ecdc4;"></i> 当前时间</h3>
+    <p style="font-size: 1.3rem; font-weight: 500; color: #2d3748;">
+        <i class="far fa-calendar-alt" style="color:#667eea;"></i> {{ current_time }}
+    </p>
+    <p style="margin-top: 8px; color: #718096;">
+        <i class="fas fa-info-circle"></i> 这是通过模板引擎动态渲染的页面
+    </p>
+</div>
+
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
+    <a href="/" class="btn"><i class="fas fa-arrow-left"></i> 返回首页</a>
+    <a href="/hello/世界" class="btn" style="background: linear-gradient(135deg, #4ecdc4, #44a08d);">
+        <i class="fas fa-globe"></i> 试试别的名字
+    </a>
+</div>
+{% endblock %}
