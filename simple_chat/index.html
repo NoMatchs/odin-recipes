@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>简约聊天室</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; max-width: 600px; margin: 20px auto; }
+        #messages { list-style: none; padding: 0; height: 400px; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; padding: 10px; }
+        #messages li { padding: 5px 10px; margin-bottom: 5px; background: #f1f1f1; border-radius: 10px; width: fit-content; max-width: 80%; }
+        #form { display: flex; gap: 5px; }
+        #input { flex: 1; padding: 10px; }
+        button { padding: 10px; cursor: pointer; }
+        .emoji-btn { background: none; border: 1px solid #ccc; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <h2>💬 简约聊天室</h2>
+    <ul id="messages"></ul>
+    <form id="form">
+        <button type="button" class="emoji-btn" onclick="addEmoji('😊')">😊</button>
+        <button type="button" class="emoji-btn" onclick="addEmoji('😂')">😂</button>
+        <button type="button" class="emoji-btn" onclick="addEmoji('👍')">👍</button>
+        <input id="input" autocomplete="off" placeholder="说点什么..." />
+        <button type="submit">发送</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+
+        // 提交表单时发送消息
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value) {
+                socket.emit('chat message', input.value);
+                input.value = '';
+            }
+        });
+
+        // 收到消息时，添加到列表里并滚动到底部
+        socket.on('chat message', (msg) => {
+            const item = document.createElement('li');
+            item.textContent = msg;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        // 简单的表情插入功能
+        function addEmoji(emoji) {
+            input.value += emoji;
+            input.focus();
+        }
+    </script>
+</body>
+</html>
