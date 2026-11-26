@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线 Web 计算器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .calculator {
+            background: #ffffff;
+            padding: 36px 32px;
+            border-radius: 18px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            width: 380px;
+            max-width: 100%;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin: 0 0 8px;
+            color: #2d3436;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 13px;
+            color: #95a5a6;
+            margin: 0 0 24px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #555;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #fafbfc;
+        }
+        input:focus, select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            background: #fff;
+        }
+        button {
+            width: 100%;
+            padding: 13px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: transform 0.15s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            margin-top: 22px;
+            padding: 16px;
+            background: #eafaf1;
+            border: 2px solid #b7e4c7;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e8449;
+        }
+        .result .label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .error {
+            margin-top: 22px;
+            padding: 14px;
+            background: #fdecea;
+            border: 2px solid #f5c6cb;
+            border-radius: 10px;
+            color: #c0392b;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>在线 Web 计算器</h1>
+        <p class="subtitle">输入两个数字，选择运算符后点击计算</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="num1">第一个数字</label>
+                <input type="number" step="any" name="num1" id="num1" placeholder="例如：3" required>
+            </div>
+
+            <div class="form-group">
+                <label for="operator">运算符</label>
+                <select name="operator" id="operator">
+                    <option value="+">加 (+)</option>
+                    <option value="-">减 (−)</option>
+                    <option value="*">乘 (×)</option>
+                    <option value="/">除 (÷)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="num2">第二个数字</label>
+                <input type="number" step="any" name="num2" id="num2" placeholder="例如：5" required>
+            </div>
+
+            <button type="submit">计算</button>
+        </form>
+
+        {% if result is not None %}
+        <div class="result">
+            <span class="label">计算结果</span>
+            {{ result }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>

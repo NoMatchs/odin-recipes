@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  :root {
+    --kimi-color-surface-raised: #f5f7fa;
+    --kimi-color-border: #c0c8d4;
+    --kimi-color-accent: #4a90d9;
+  }
+  .hw-box { fill: var(--kimi-color-surface-raised); stroke: var(--kimi-color-border); cursor: pointer; }
+  .bus { stroke: var(--kimi-color-accent); stroke-width: 3; }
+  svg text { text-anchor: middle; dominant-baseline: middle; font-size: 14px; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 760 400" width="760" height="400">
+  <rect class="hw-box" id="alu" x="232" y="78" width="140" height="72" rx="10"/>
+  <text x="302" y="114">运算器 ALU</text>
+  <line class="bus" x1="84" y1="352" x2="676" y2="352"/>
+</svg>
+<p id="hw-h">点击方框查看说明</p>
+
+<script>
+  const g = document.getElementById('alu');
+  const hwH = document.getElementById('hw-h');
+  const data = { h: '算术逻辑单元，负责加减与逻辑运算' };
+  g.addEventListener('click', () => { hwH.textContent = data.h; });
+</script>
+</body>
+</html>
